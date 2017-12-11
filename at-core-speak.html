@@ -1,0 +1,43 @@
+<link rel="import" href="../tangere/tangere.html" />
+
+<dom-module id="at-core-speak">
+  <template>
+    <style>
+      :host {
+        display: block;
+        box-sizing: border-box;
+      }
+    </style>
+    
+    
+  </template>
+</dom-module>
+<script>
+  Polymer({
+    is: "at-core-speak",
+    properties: {
+
+      value: {
+        type: String,
+        value: '',
+        xtype: 'code',
+        mode: 'ssml'
+      },
+
+      mode: {
+        type: String,
+        value: "auto",
+        xtype: 'enum',
+        enum: [ 'auto', 'play', 'button' ]
+      }
+    },
+
+    ready: function () {
+
+    },
+
+    play: function() {
+
+    }
+  });
+</script>
