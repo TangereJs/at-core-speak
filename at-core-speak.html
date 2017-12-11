@@ -13,7 +13,7 @@
     
     <div hidden$="[[supported]]">Speach synthesis is not supported by this browser</div>
     
-    <at-carbon-icon-button hidden$="[[!_computePlayButtonVisible(supported, mode)]]" icon="now:play" on-tap="_handlePlayButtonOnTap"></at-carbon-icon-button>
+    <at-carbon-icon-button hidden$="[[!_computePlayButtonVisible(supported, mode)]]" disabled$="[[_inProgress]]" icon="now:play" on-tap="_handlePlayButtonOnTap"></at-carbon-icon-button>
 
   </template>
 </dom-module>
@@ -42,7 +42,15 @@
         type: Boolean,
         value: false,
         readOnly: true
-      }
+      },
+
+      // TODO: should this be public ??? 
+      _inProgress: {
+        type: Boolean,
+        value: false,
+        readOnly: true
+      },
+
     },
 
     _computePlayButtonVisible: function(supported, mode) {
@@ -73,41 +81,47 @@
     play: function() {
       if (!this.value) return;
 
+      if (this._inProgress) return;
+
       var ut = new SpeechSynthesisUtterance(this.value);
 
-      // SpeechSynthesisUtterance.lang
-      // Gets and sets the language of the utterance.
-      // SpeechSynthesisUtterance.pitch
-      // Gets and sets the pitch at which the utterance will be spoken at.
-      // SpeechSynthesisUtterance.rate
-      // Gets and sets the speed at which the utterance will be spoken at.
-      // SpeechSynthesisUtterance.text
-      // Gets and sets the text that will be synthesised when the utterance is spoken.
-      // SpeechSynthesisUtterance.voice
-      // Gets and sets the voice that will be used to speak the utterance.
-      // SpeechSynthesisUtterance.volume
-      // Gets and sets the volume that the utterance will be spoken at.
+      // Ref material
+      // https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis
+      // https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisUtterance
 
-      // SpeechSynthesisUtterance.onboundary
-      // Fired when the spoken utterance reaches a word or sentence boundary.
-      // SpeechSynthesisUtterance.onend
-      // Fired when the utterance has finished being spoken.
-      // SpeechSynthesisUtterance.onerror
-      // Fired when an error occurs that prevents the utterance from being succesfully spoken.
-      // SpeechSynthesisUtterance.onmark
-      // Fired when the spoken utterance reaches a named SSML "mark" tag.
-      // SpeechSynthesisUtterance.onpause
-      // Fired when the utterance is paused part way through.
-      // SpeechSynthesisUtterance.onresume
-      // Fired when a paused utterance is resumed.
-      // SpeechSynthesisUtterance.onstart
-      // Fired when the utterance has begun to be spoken.
-      
+      if (!this._boundOnStartHandler) {
+        this._boundOnStartHandler = this._handleUtteranceOnStart.bind(this);
+      }
+      ut.onstart = this._boundOnStartHandler;
+
+      if(!this._boundOnEndHandler) {
+        this._boundOnEndHandler = this._handleUtteranceOnEnd.bind(this);
+      }
+      ut.onend = this._boundOnEndHandler;
+
+      if (!this._boundOnErrorHandler) {
+        this._boundOnErrorHandler = this._handleUtteranceOnError.bind(this);
+      }
+      ut.onerror = this._boundOnErrorHandler;
+
       window.speechSynthesis.speak(ut);
     },
 
     _handlePlayButtonOnTap: function(event) {
       this.play();
-    }
+    },
+
+    _handleUtteranceOnStart: function(event) {
+      this._set_inProgress(true);
+    },
+
+    _handleUtteranceOnEnd: function(event) {
+      this._set_inProgress(false);
+    },
+
+    _handleUtteranceOnError: function(event) {
+      this._set_inProgress(false);
+    },
+
   });
 </script>
