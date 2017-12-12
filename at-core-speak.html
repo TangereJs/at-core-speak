@@ -2,6 +2,9 @@
 <link rel="import" href="../at-theme/at-theme.html" />
 <link rel="import" href="../at-carbon-icon-button/at-carbon-icon-button.html" />
 
+<script src="lib/ua-parser.min.js"></script>
+<script src="lib/ssml-parser.js"></script>
+
 <dom-module id="at-core-speak">
   <template>
     <style>
@@ -83,11 +86,48 @@
     },
 
     play: function() {
+      if (!this.supported) return;
+
       if (!this.value) return;
 
       if (this._inProgress) return;
 
-      var ut = new SpeechSynthesisUtterance(this.value);
+      if (!this._userAgent) {
+        this._userAgent = UAParser(navigator.userAgent);
+      }
+        
+      var value = this.value;
+      
+      // when browser is Edge code needs to check 
+      // 1) if <?xml> declaration already exists
+      // 2) if <speak> root element already exists
+      // 3) check that <speak> root element has necessary attributes
+      // 4) when 1, 2 and 3 are false, above elements need to be created
+
+      // when browser is FF, code needs to parse the value and strip the tags
+
+      if (this._userAgent.browser.name === "Edge") {
+        // parse value to check if <?xml> tag or <speak> tag already exists
+        // if exist only update <speak> tag attributes
+
+        // multiple speak tags are not supported, and multiples can be removed, but its better to report error
+
+        // if <?xml> tag or <speak> tag doesn't exist <?xml> tag should be created and root <speak> tag should be created and added
+
+        // wrap value into <?xml>
+        var wrapper = '<?xml version="1.0"?>' +
+          '<speak version="1.0" xmlns="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/2001/10/synthesis http://www.w3.org/TR/speech-synthesis/synthesis.xsd" xml:lang="en-US">' + 
+            this.value + 
+            // Here are <say-as interpret-as="characters">house</say-as> samples. 
+            // Here are house samples.
+          '</speak>';
+        value = wrapper;
+      
+      } else if (this._userAgent.browser.name === "Firefox") {
+        value = window.stripSsml(value);
+      }
+
+      var ut = new SpeechSynthesisUtterance(value);
 
       // Ref material
       // https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis
