@@ -35,7 +35,11 @@
         type: String,
         value: "auto",
         xtype: 'enum',
-        enum: [ 'auto', 'play', 'button' ]
+        xvaluelist: [ 
+          { title: 'auto', value: 'auto' },
+          { title: 'play', value: 'play' },
+          { title: 'button', value: 'button' }
+        ]
       },
 
       supported: {
