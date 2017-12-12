@@ -104,24 +104,24 @@
       // 3) check that <speak> root element has necessary attributes
       // 4) when 1, 2 and 3 are false, above elements need to be created
 
-      // when browser is FF, code needs to parse the value and strip the tags
-
       if (this._userAgent.browser.name === "Edge") {
-        // parse value to check if <?xml> tag or <speak> tag already exists
-        // if exist only update <speak> tag attributes
+        var declExists = value.indexOf('<?xml') !== -1;
+        var speakExists = value.indexOf('<speak') !== -1;
+        var result = [];
 
-        // multiple speak tags are not supported, and multiples can be removed, but its better to report error
+        if (!declExists) {
+          result.push('<?xml version="1.0"?>');
+        }
 
-        // if <?xml> tag or <speak> tag doesn't exist <?xml> tag should be created and root <speak> tag should be created and added
+        if (!speakExists) {
+          result.push('<speak version="1.0" xmlns="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/2001/10/synthesis http://www.w3.org/TR/speech-synthesis/synthesis.xsd" xml:lang="en-US">');
+          result.push(value);
+          result.push('</speak>');
+        }
 
-        // wrap value into <?xml>
-        var wrapper = '<?xml version="1.0"?>' +
-          '<speak version="1.0" xmlns="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/2001/10/synthesis http://www.w3.org/TR/speech-synthesis/synthesis.xsd" xml:lang="en-US">' + 
-            this.value + 
-            // Here are <say-as interpret-as="characters">house</say-as> samples. 
-            // Here are house samples.
-          '</speak>';
-        value = wrapper;
+        if (result.length) {
+          value = result.join("");
+        }
       
       } else if (this._userAgent.browser.name === "Firefox") {
         value = window.stripSsml(value);
