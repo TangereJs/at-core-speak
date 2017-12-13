@@ -85,6 +85,15 @@
       return Object.prototype.toString.apply(obj) === "[object String]";
     },
 
+    _wrapIntoXmlAndSpeak: function(value) {
+      var result = [];
+      result.push('<?xml version="1.0"?>');
+      result.push('<speak version="1.0" xmlns="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/2001/10/synthesis http://www.w3.org/TR/speech-synthesis/synthesis.xsd" xml:lang="en-US">');
+      result.push(value);
+      result.push('</speak>');
+      return result.join("");
+    },
+
     play: function() {
       if (!this.supported) return;
 
@@ -105,22 +114,53 @@
       // 4) when 1, 2 and 3 are false, above elements need to be created
 
       if (this._userAgent.browser.name === "Edge") {
-        var declExists = value.indexOf('<?xml') !== -1;
-        var speakExists = value.indexOf('<speak') !== -1;
-        var result = [];
+        var div = document.createElement('div');
+        div.innerHTML = value;
 
-        if (!declExists) {
-          result.push('<?xml version="1.0"?>');
-        }
+        var childNodes = div.childNodes;
 
-        if (!speakExists) {
-          result.push('<speak version="1.0" xmlns="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/2001/10/synthesis http://www.w3.org/TR/speech-synthesis/synthesis.xsd" xml:lang="en-US">');
-          result.push(value);
-          result.push('</speak>');
-        }
+        // go through child nodes
+        // ignore empty text nodes (new lines etc)
+        // check if xml decl element exists
+        // check if speak element exists
 
-        if (result.length) {
-          value = result.join("");
+        // if value doesn't have xml decl elt or speak elt, wrap
+
+        // handle edge cases (pun unintended)
+
+        debugger;
+        if (childNodes.length !== 2) {
+          // this means that we have value that should be wrapped
+          value = this._wrapIntoXmlAndSpeak(value);
+        
+        } else {
+          // check that first child is xml
+          var xmlNode = childNodes[0];
+          var hasXmlDecl = xmlNode.nodeValue.indexOf("?xml") === 0;
+
+          // check that second child is speak
+          var speakNode = childNodes[1];
+          var isSpeakNode = speakNode.nodeName === "SPEAK";
+
+          if (!hasXmlDecl && !isSpeakNode) {
+            debugger;
+            // wrap into xml and speak
+            value = this._wrapIntoXmlAndSpeak(value);
+          
+          } else if (hasXmlDecl && !isSpeakNode) {
+            // ignore xml delc and wrap second node into xml and speak
+            debugger;
+            value = this._wrapIntoXmlAndSpeak(speakNode.nodeValue);
+
+          } else if (!hasXmlDecl && isSpeakNode) {
+            // take speak node content and wrap into xml and speak
+            debugger;
+            value = this._wrapIntoXmlAndSpeak(speakNode.innerHTML);
+          
+          // } else {
+            // has xml node and speak node; do nothing
+            // 
+          }
         }
       
       } else if (this._userAgent.browser.name === "Firefox") {
