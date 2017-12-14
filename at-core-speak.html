@@ -85,6 +85,37 @@
       return Object.prototype.toString.apply(obj) === "[object String]";
     },
 
+    _stripSsml: function(ssmlStr) {
+      var result = [];
+      
+      var indexOfLt = ssmlStr.indexOf('<');
+
+      if (indexOfLt === -1) return result;
+
+      var indexOfGt = 0;
+
+      while(indexOfLt > -1) {
+
+        subResult = ssmlStr.substring(indexOfGt, indexOfLt);
+        result.push(subResult);
+
+        indexOfGt = ssmlStr.indexOf('>', indexOfLt);
+
+        if (indexOfGt === -1) break;
+        indexOfGt += 1;
+        
+        indexOfLt = ssmlStr.indexOf('<', indexOfGt);
+      }
+
+      if (indexOfGt < ssmlStr.length) {
+        var lastPart = ssmlStr.substring(indexOfGt);
+        result.push(lastPart);
+      }
+
+      result = result.join(" ");
+      return result;
+    },
+
     _wrapIntoXmlAndSpeak: function(value) {
       var result = [];
       result.push('<?xml version="1.0"?>');
@@ -107,64 +138,53 @@
         
       var value = this.value;
       
-      // when browser is Edge code needs to check 
-      // 1) if <?xml> declaration already exists
-      // 2) if <speak> root element already exists
-      // 3) check that <speak> root element has necessary attributes
-      // 4) when 1, 2 and 3 are false, above elements need to be created
-
       if (this._userAgent.browser.name === "Edge") {
         var div = document.createElement('div');
         div.innerHTML = value;
 
         var childNodes = div.childNodes;
 
-        // go through child nodes
-        // ignore empty text nodes (new lines etc)
-        // check if xml decl element exists
-        // check if speak element exists
+        if (!childNodes.length) return;
 
-        // if value doesn't have xml decl elt or speak elt, wrap
+        if (childNodes.length === 1) {
+          // child node can be plain text, xml decl, or single element
+          var cn = childNodes[0];
+          if (cn.nodeType === Node.TEXT_NODE || cn.nodeType === Node.COMMENT_NODE) {
+            // wrap nodeValue
+            value = this._wrapIntoXmlAndSpeak(cn.nodeValue);
 
-        // handle edge cases (pun unintended)
+          } else if (cn.nodeType === Node.ELEMENT_NODE) {
+            if (cn.nodeName !== "SPEAK") {
+              value = this._wrapIntoXmlAndSpeak(value);
+            
+            } else {
+              value = this._wrapIntoXmlAndSpeak(cn.innerHTML);
+            }
 
-        debugger;
-        if (childNodes.length !== 2) {
-          // this means that we have value that should be wrapped
-          value = this._wrapIntoXmlAndSpeak(value);
+          } else {
+            // else report error
+            console.log("core-speak: Unrecognized node type of " + cn.nodeType + ' ' + cn.nodeName + ' ' + cn.nodeValue);
+          }
         
         } else {
-          // check that first child is xml
-          var xmlNode = childNodes[0];
-          var hasXmlDecl = xmlNode.nodeValue.indexOf("?xml") === 0;
+          var found = false;
+          var cn;
+          // find first speak elt and wrap its innerHTML 
+          for (var i=0; i<childNodes.length && !found; i++) {
+            cn = childNodes[i];
+            found = cn.nodeName === "SPEAK";
+          }
+          
+          if (found) {
+            value = this._wrapIntoXmlAndSpeak(cn.innerHTML);
 
-          // check that second child is speak
-          var speakNode = childNodes[1];
-          var isSpeakNode = speakNode.nodeName === "SPEAK";
-
-          if (!hasXmlDecl && !isSpeakNode) {
-            debugger;
-            // wrap into xml and speak
+          } else {
             value = this._wrapIntoXmlAndSpeak(value);
-          
-          } else if (hasXmlDecl && !isSpeakNode) {
-            // ignore xml delc and wrap second node into xml and speak
-            debugger;
-            value = this._wrapIntoXmlAndSpeak(speakNode.nodeValue);
-
-          } else if (!hasXmlDecl && isSpeakNode) {
-            // take speak node content and wrap into xml and speak
-            debugger;
-            value = this._wrapIntoXmlAndSpeak(speakNode.innerHTML);
-          
-          // } else {
-            // has xml node and speak node; do nothing
-            // 
           }
         }
       
       } else if (this._userAgent.browser.name === "Firefox") {
-        value = window.stripSsml(value);
+        value = this._stripSsml(value);
       }
 
       var ut = new SpeechSynthesisUtterance(value);
